@@ -10,11 +10,13 @@ import {
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
+import { Route, Routes } from 'react-router-dom';
 
 import { StudioHeader } from '@edx/frontend-component-header';
 import { StudioFooterSlot } from '@edx/frontend-component-footer';
 import messages from './i18n';
-import ExamplePage from './example/ExamplePage';
+import CourseFromRecordingPage from './course-from-recording/CourseFromRecordingPage';
+import NotFoundPage from './not-found-page/NotFoundPage';
 
 import './index.scss';
 
@@ -28,7 +30,13 @@ subscribe(APP_READY, () => {
     <AppProvider>
       <QueryClientProvider client={queryClient}>
         <StudioHeader title="" isHiddenMainMenu isNewHomePage={false} />
-        <ExamplePage />
+        <main>
+          {/* One route per tool; a tool's steps are screens inside its page, not separate routes. */}
+          <Routes>
+            <Route path="/course-from-recording/:courseId" element={<CourseFromRecordingPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </main>
         <StudioFooterSlot />
       </QueryClientProvider>
     </AppProvider>,
