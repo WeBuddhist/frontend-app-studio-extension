@@ -83,3 +83,29 @@ it('starts a run by getting the recording ready, as the first tenth of the step'
   expect(stageState(messages.stagePrepare)).toContain('--done');
   expect(stageState(messages.stageLearnNoise)).toContain('--current');
 });
+
+it('suggesting a course: the outline first, then each lesson', () => {
+  renderScreen(job({ status: 'suggesting', progress: 30, downloads: { transcriptJson: 'x' } }));
+
+  expect(screen.getByRole('heading', { name: messages.suggestTitle.defaultMessage })).not.toBeNull();
+  expect(stageState(messages.stageTopicBreaks)).toContain('--done');
+  expect(stageState(messages.stageDraftLessons)).toContain('--current');
+});
+
+it('suggesting a course: the outline is one step until the service reports it done', () => {
+  renderScreen(job({ status: 'suggesting', progress: 5, downloads: { transcriptJson: 'x' } }));
+  expect(stageState(messages.stageTopicBreaks)).toContain('--current');
+  expect(stageState(messages.stageDraftLessons)).toContain('--pending');
+});
+
+it('building the course: the audio is cut, then Studio adds it as a draft', () => {
+  renderScreen(job({ status: 'cutting_audio', progress: 50, courseApproved: true }));
+  expect(screen.getByRole('heading', { name: messages.buildTitle.defaultMessage })).not.toBeNull();
+  expect(stageState(messages.stageCutAudio)).toContain('--current');
+});
+
+it('while Studio writes the course, that is the part being worked on', () => {
+  renderScreen(job({ status: 'writing_course', progress: 95, courseApproved: true }));
+  expect(stageState(messages.stageCutAudio)).toContain('--done');
+  expect(stageState(messages.stageWriteCourse)).toContain('--current');
+});

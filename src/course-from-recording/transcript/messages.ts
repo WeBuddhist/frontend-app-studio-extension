@@ -156,6 +156,26 @@ const messages = defineMessages({
     defaultMessage: 'A line can’t be empty. Use Cancel to keep it as it was.',
     description: 'Error when the author tries to save an empty line.',
   },
+  nextStep: {
+    id: 'studio-extension.courseFromRecording.transcript.nextStep',
+    defaultMessage: 'When the text reads well, we suggest a course from it: sections, lessons, summaries and questions. You can change all of it before anything is added to the course. The text can’t be corrected after this.',
+    description: 'Explains the next step, above the "Suggest a course" button.',
+  },
+  suggest: {
+    id: 'studio-extension.courseFromRecording.transcript.suggest',
+    defaultMessage: 'Suggest a course',
+    description: 'Button: the service suggests a course from the checked transcript.',
+  },
+  suggesting: {
+    id: 'studio-extension.courseFromRecording.transcript.suggesting',
+    defaultMessage: 'Starting…',
+    description: 'Shown on the "Suggest a course" button while the request is sent.',
+  },
+  suggestError: {
+    id: 'studio-extension.courseFromRecording.transcript.suggestError',
+    defaultMessage: 'The course could not be suggested just now. Try again in a few minutes.',
+    description: 'Error when asking for a course to be suggested failed.',
+  },
   noneToCheck: {
     id: 'studio-extension.courseFromRecording.transcript.noneToCheck',
     defaultMessage: 'No lines are marked to check.',

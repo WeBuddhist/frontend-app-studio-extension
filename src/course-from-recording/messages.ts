@@ -56,6 +56,16 @@ const messages = defineMessages({
     defaultMessage: 'Transcript',
     description: 'Last step in the step bar: the finished transcript.',
   },
+  stepShape: {
+    id: 'studio-extension.courseFromRecording.stepShape',
+    defaultMessage: 'Shape course',
+    description: 'Step in the step bar: the author shapes the suggested course.',
+  },
+  stepCourse: {
+    id: 'studio-extension.courseFromRecording.stepCourse',
+    defaultMessage: 'Draft course',
+    description: 'Last step in the step bar: the course is added to Studio as a draft.',
+  },
   stepDone: {
     id: 'studio-extension.courseFromRecording.stepDone',
     defaultMessage: '(done)',

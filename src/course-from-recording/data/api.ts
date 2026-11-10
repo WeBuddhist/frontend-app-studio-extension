@@ -1,4 +1,4 @@
-import { camelCaseObject, getConfig } from '@edx/frontend-platform';
+import { camelCaseObject, getConfig, snakeCaseObject } from '@edx/frontend-platform';
 import { getAuthenticatedHttpClient } from '@edx/frontend-platform/auth';
 
 // The sherab-custom-plugin course_from_recording app, on the Studio host.
@@ -12,6 +12,11 @@ export type JobStatus =
   | 'needs_speaker_labels'
   | 'transcribing'
   | 'transcript_ready'
+  | 'suggesting'
+  | 'course_draft_ready'
+  | 'cutting_audio'
+  | 'writing_course'
+  | 'course_ready'
   | 'failed'
   | 'cancelled';
 
@@ -31,6 +36,46 @@ export interface SpeakerGroup {
   group: string;
   minutes: number;
   samples: string[];
+}
+
+/** A practice question of a lesson: ``answer`` is the index of the right option. */
+export interface DraftQuestion {
+  question: string;
+  options: string[];
+  answer: number;
+  explanation: string;
+}
+
+/**
+ * One lesson of the suggested course (a subsection in Studio). ``firstLine``/``lastLine`` are lines of the
+ * transcript and ``start``/``end`` seconds of the recording; the author can't change them.
+ */
+export interface DraftLesson {
+  id: string;
+  title: string;
+  include: boolean;
+  firstLine: number;
+  lastLine: number;
+  start: number;
+  end: number;
+  minutes: number;
+  summary: string;
+  keyPoints: string[];
+  mcq: DraftQuestion[];
+  reflection: string[];
+}
+
+export interface DraftSection {
+  id: string;
+  title: string;
+  lessons: DraftLesson[];
+}
+
+/** The course the service suggested, as the author last saved it. */
+export interface CourseDraft {
+  version: number;
+  courseTitle: string;
+  sections: DraftSection[];
 }
 
 export interface Job {
@@ -53,6 +98,12 @@ export interface Job {
   recordingKept: boolean;
   /** The author's corrections of the transcript: line number -> text. */
   transcriptEdits: Record<string, string>;
+  /** The suggested course, once there is one (an empty object before). */
+  courseDraft: Partial<CourseDraft>;
+  /** The author has confirmed the teacher reviewed the outline, and asked for the course to be made. */
+  courseApproved: boolean;
+  /** The sections written into the course. */
+  courseSections: string[];
   created: string;
   modified: string;
 }
@@ -197,6 +248,29 @@ export async function reuseRecording(jobId: string, details: RecordingDetails): 
   return camelCaseObject(data.job);
 }
 
+/** Once the transcript reads well: the service suggests a course from it. */
+export async function suggestCourse(jobId: string): Promise<Job> {
+  const { data } = await getAuthenticatedHttpClient().post(`${getApiBaseUrl()}/jobs/${jobId}/suggest/`);
+  return camelCaseObject(data.job);
+}
+
+/** Save the author's changes to the suggested course (the whole draft). Returns it as saved. */
+export async function saveCourseDraft(jobId: string, draft: CourseDraft): Promise<CourseDraft> {
+  const { data } = await getAuthenticatedHttpClient().put(
+    `${getApiBaseUrl()}/jobs/${jobId}/course-draft/`,
+    snakeCaseObject(draft),
+  );
+  return camelCaseObject(data.course_draft);
+}
+
+/** The teacher has reviewed the outline: cut the lesson audio and add the course to Studio as a draft. */
+export async function buildCourse(jobId: string): Promise<Job> {
+  const { data } = await getAuthenticatedHttpClient().post(`${getApiBaseUrl()}/jobs/${jobId}/build/`, {
+    approved: true,
+  });
+  return camelCaseObject(data.job);
+}
+
 /**
  * The message to show for a failed API call: Studio's own ``error``, or the first field error
  * (e.g. ``{"details": {"teacher_language": ["..."]}}``), or ``fallback``. Only a JSON answer counts:
@@ -205,11 +279,12 @@ export async function reuseRecording(jobId: string, details: RecordingDetails): 
 export function apiErrorMessage(error: unknown, fallback: string): string {
   const data = (error as { response?: { data?: unknown } })?.response?.data;
   if (!data || typeof data !== 'object') { return fallback; }
+  // Depth first, skipping the empty ``{}`` Django REST framework puts in a list for each item that was fine,
+  // e.g. ``{"sections": [{}, {"lessons": [{"summary": ["..."]}]}]}``.
   const first = (value: unknown): string | undefined => {
     if (typeof value === 'string') { return value; }
-    if (Array.isArray(value)) { return first(value[0]); }
-    if (value && typeof value === 'object') { return first(Object.values(value)[0]); }
-    return undefined;
+    if (!value || typeof value !== 'object') { return undefined; }
+    return (Array.isArray(value) ? value : Object.values(value)).map(first).find(Boolean);
   };
   if (data && typeof data === 'object' && 'error' in data && typeof data.error === 'string') {
     return data.error;

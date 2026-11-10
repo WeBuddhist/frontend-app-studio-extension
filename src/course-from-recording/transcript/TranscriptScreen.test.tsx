@@ -12,6 +12,7 @@ import messages from './messages';
 jest.mock('../data/api', () => ({
   ...jest.requireActual('../data/api'),
   saveTranscriptEdit: jest.fn(),
+  suggestCourse: jest.fn(),
 }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
@@ -49,14 +50,15 @@ const text = (message: { defaultMessage?: string }) => message.defaultMessage as
 
 const renderScreen = (value: api.Job = job) => {
   const onLinksExpired = jest.fn();
+  const onSuggested = jest.fn();
   render(
     <IntlProvider locale="en">
       <QueryClientProvider client={new QueryClient()}>
-        <TranscriptScreen job={value} onLinksExpired={onLinksExpired} />
+        <TranscriptScreen job={value} onLinksExpired={onLinksExpired} onSuggested={onSuggested} />
       </QueryClientProvider>
     </IntlProvider>,
   );
-  return { onLinksExpired };
+  return { onLinksExpired, onSuggested };
 };
 
 const lineAt = async (time: string) => (
@@ -257,7 +259,7 @@ it('goes on from the asked line once the expired audio link is replaced', async 
   const view = (value: api.Job) => (
     <IntlProvider locale="en">
       <QueryClientProvider client={client}>
-        <TranscriptScreen job={value} onLinksExpired={onLinksExpired} />
+        <TranscriptScreen job={value} onLinksExpired={onLinksExpired} onSuggested={jest.fn()} />
       </QueryClientProvider>
     </IntlProvider>
   );
@@ -310,4 +312,32 @@ it('keeps lines that start at the same moment apart', async () => {
   expect(screen.getAllByRole('button', { name: 'Play from 0:10' })).toHaveLength(2);
   expect(error.mock.calls.flat().join(' ')).not.toContain('same key');
   error.mockRestore();
+});
+
+it('suggests a course once the text reads well', async () => {
+  const user = userEvent.setup();
+  mockedApi.suggestCourse.mockResolvedValue({ ...job, status: 'queued' } as api.Job);
+  const { onSuggested } = renderScreen();
+  await screen.findByText('ཕྱག་ཐལ་མོ་སྦྱར་ཏེ།');
+
+  await user.click(screen.getByRole('button', { name: text(messages.suggest) }));
+
+  expect(mockedApi.suggestCourse).toHaveBeenCalledWith('job-1');
+  expect(onSuggested).toHaveBeenCalledWith(expect.objectContaining({ status: 'queued' }));
+});
+
+it('waits for an open correction before suggesting, and says why suggesting failed', async () => {
+  const user = userEvent.setup();
+  mockedApi.suggestCourse.mockRejectedValue({ response: { data: { error: 'The transcript is not ready yet.' } } });
+  const { onSuggested } = renderScreen();
+  const line = await lineAt('0:26');
+
+  await user.click(within(line).getByRole('button', { name: 'Edit the line at 0:26' }));
+  expect(screen.getByRole('button', { name: text(messages.suggest) })).toHaveProperty('disabled', true);
+  await user.click(within(line).getByRole('button', { name: text(messages.cancel) }));
+
+  await user.click(screen.getByRole('button', { name: text(messages.suggest) }));
+
+  expect(await screen.findByText('The transcript is not ready yet.')).not.toBeNull();
+  expect(onSuggested).not.toHaveBeenCalled();
 });

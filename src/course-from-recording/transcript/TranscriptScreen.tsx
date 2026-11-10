@@ -6,7 +6,7 @@ import {
 } from '@openedx/paragon';
 import { Edit, Pause, PlayArrow } from '@openedx/paragon/icons';
 
-import { apiErrorMessage, saveTranscriptEdit } from '../data/api';
+import { apiErrorMessage, saveTranscriptEdit, suggestCourse } from '../data/api';
 import type { Job } from '../data/api';
 import { clock } from '../data/format';
 import useServiceFile from '../data/useServiceFile';
@@ -51,6 +51,8 @@ interface TranscriptScreenProps {
   job: Job;
   /** The download links expire after an hour; called to fetch fresh ones when the audio won't play. */
   onLinksExpired: () => void;
+  /** Called with the queued job once the author asks for a course to be suggested. */
+  onSuggested: (job: Job) => void;
 }
 
 /**
@@ -58,7 +60,7 @@ interface TranscriptScreenProps {
  * recording from there), the lines the computer was unsure about marked, and the parts that were not
  * written down (the translator, silences) as short grey rows. Corrections are saved to Studio line by line.
  */
-const TranscriptScreen = ({ job, onLinksExpired }: TranscriptScreenProps) => {
+const TranscriptScreen = ({ job, onLinksExpired, onSuggested }: TranscriptScreenProps) => {
   const intl = useIntl();
   const player = useRef<HTMLAudioElement>(null);
   const transcript = useServiceFile<Line[]>(job.id, 'transcript', job.downloads?.transcriptJson);
@@ -69,6 +71,8 @@ const TranscriptScreen = ({ job, onLinksExpired }: TranscriptScreenProps) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [onlyToCheck, setOnlyToCheck] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestError, setSuggestError] = useState('');
   // The line being heard: highlighted, and its play button shows pause. Kept as the line, not the time,
   // so the transcript is drawn again only when the next line starts, not on every tick of the player.
   const [heard, setHeard] = useState(-1);
@@ -159,6 +163,19 @@ const TranscriptScreen = ({ job, onLinksExpired }: TranscriptScreenProps) => {
   const duration = (line: Line) => {
     const seconds = Math.round(line.end - line.start);
     return seconds < 60 ? `${seconds} s` : clock(seconds);
+  };
+
+  // Once the text reads well: the service suggests a course from it. Corrections can't change after this.
+  const suggest = async () => {
+    setSuggesting(true);
+    setSuggestError('');
+    player.current?.pause();
+    try {
+      onSuggested(await suggestCourse(job.id));
+    } catch (suggestFailure) {
+      setSuggestError(apiErrorMessage(suggestFailure, intl.formatMessage(messages.suggestError)));
+      setSuggesting(false);
+    }
   };
 
   // The transcript as a text file, with the author's corrections.
@@ -338,6 +355,20 @@ const TranscriptScreen = ({ job, onLinksExpired }: TranscriptScreenProps) => {
           {onlyToCheck && shown.length === 0 && (
             <p className="recording-transcript__empty">{intl.formatMessage(messages.noneToCheck)}</p>
           )}
+
+          {/* The next step, always in view at the bottom of a long transcript. */}
+          <div className="recording-transcript__next">
+            <p className="recording-transcript__next-text">{intl.formatMessage(messages.nextStep)}</p>
+            {suggestError && <p className="recording-transcript__error" role="alert">{suggestError}</p>}
+            <Button
+              variant="primary"
+              className="recording-transcript__suggest"
+              disabled={suggesting || editing !== null}
+              onClick={suggest}
+            >
+              {intl.formatMessage(suggesting ? messages.suggesting : messages.suggest)}
+            </Button>
+          </div>
         </>
       )}
     </section>

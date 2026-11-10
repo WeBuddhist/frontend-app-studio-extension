@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useIntl } from '@edx/frontend-platform/i18n';
 import { Alert, Button, Icon } from '@openedx/paragon';
 import {
-  AudioFile, CheckCircle, DeleteOutline, RestartAlt, Upload, WarningFilled,
+  AudioFile, CheckCircle, DeleteOutline, Info, RestartAlt, Upload, WarningFilled,
 } from '@openedx/paragon/icons';
 
 import { apiErrorMessage, startOver } from '../data/api';
@@ -48,6 +48,7 @@ const StartOverScreen = ({
     (job.speakerGroups?.length || downloads.timeline) && messages.voices,
     downloads.clean && messages.cleanAudio,
     downloads.transcript && messages.transcript,
+    job.courseDraft?.sections && messages.courseDraft,
   ].filter(Boolean) as (typeof messages.voices)[];
   if (!deleted.length) { deleted.push(messages.progressSoFar); }
   if (choice === 'different') { deleted.push(messages.recording); }
@@ -89,6 +90,13 @@ const StartOverScreen = ({
         </ul>
       </div>
 
+      {job.courseSections?.length > 0 && (
+        <p className="recording-start-over__paid" role="note">
+          <Icon src={Info} className="recording-start-over__paid-icon" />
+          {intl.formatMessage(messages.courseStays)}
+        </p>
+      )}
+
       {paidMinutes > 0 && (
         <p className="recording-start-over__paid" role="note">
           <Icon src={WarningFilled} className="recording-start-over__paid-icon" />
@@ -120,7 +128,7 @@ const StartOverScreen = ({
                   onChange={() => setChoice(value)}
                   aria-labelledby={`${id}-label`}
                   aria-describedby={`${id}-help`}
-                  className="recording-start-over__card-input"
+                  className="recording-start-over__card-input sr-only"
                 />
                 <span className="recording-start-over__card-icon"><Icon src={icon} /></span>
                 <span className="recording-start-over__card-text">

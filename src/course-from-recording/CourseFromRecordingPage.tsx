@@ -15,6 +15,8 @@ import ProgressScreen from './progress/ProgressScreen';
 import StartOverScreen from './start-over/StartOverScreen';
 import type { RecordingChoice } from './start-over/StartOverScreen';
 import startOverMessages from './start-over/messages';
+import CourseReadyScreen from './course-ready/CourseReadyScreen';
+import ShapeCourseScreen from './shape-course/ShapeCourseScreen';
 import { RUNNING_STATUSES, currentStep, stepsFor } from './steps';
 import TagVoicesScreen from './tag-voices/TagVoicesScreen';
 import TranscriptScreen from './transcript/TranscriptScreen';
@@ -45,9 +47,15 @@ const CourseFromRecordingPage = () => {
   const [confirmStartOver, setConfirmStartOver] = useState<RecordingChoice | null>(null);
   // On the upload screen, the step bar follows the author's answer to "How many people speak?".
   const [uploadMultipleSpeakers, setUploadMultipleSpeakers] = useState(false);
+  // A screen's answer from Studio is the newest state of the job. A refetch still under way (e.g. after the
+  // window got focus) started earlier, so it is dropped rather than allowed to land after this and undo it.
+  const updateLatest = (update: (latest: LatestJob | undefined) => LatestJob | undefined) => {
+    queryClient.cancelQueries({ queryKey: jobKey });
+    queryClient.setQueryData<LatestJob>(jobKey, update);
+  };
   const showJob = (job: Job) => {
     setConfirmStartOver(null);
-    queryClient.setQueryData<LatestJob>(jobKey, (latest) => latest && { ...latest, job });
+    updateLatest((latest) => latest && { ...latest, job });
   };
 
   const job = latestJob.data?.job ?? null;
@@ -93,7 +101,21 @@ const CourseFromRecordingPage = () => {
   } else if (job.status === 'needs_speaker_labels') {
     content = <TagVoicesScreen job={job} onTagged={showJob} onSamplesExpired={() => latestJob.refetch()} />;
   } else if (job.status === 'transcript_ready') {
-    content = <TranscriptScreen job={job} onLinksExpired={() => latestJob.refetch()} />;
+    content = <TranscriptScreen job={job} onLinksExpired={() => latestJob.refetch()} onSuggested={showJob} />;
+  } else if (job.status === 'course_draft_ready') {
+    content = (
+      <ShapeCourseScreen
+        key={job.id}
+        job={job}
+        onBuilt={showJob}
+        // Only into the same job: by the time the screen closes, the page may hold a newer one.
+        onDraftChange={(courseDraft) => updateLatest((latest) => (
+          latest?.job?.id === job.id ? { ...latest, job: { ...latest.job, courseDraft } } : latest
+        ))}
+      />
+    );
+  } else if (job.status === 'course_ready') {
+    content = <CourseReadyScreen job={job} courseId={courseId} />;
   } else {
     content = (
       <p className="course-from-recording__placeholder">

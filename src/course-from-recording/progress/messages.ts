@@ -26,6 +26,16 @@ const messages = defineMessages({
     defaultMessage: 'Writing down the teaching',
     description: 'Title while the teacher is being transcribed.',
   },
+  suggestTitle: {
+    id: 'studio-extension.courseFromRecording.progress.suggestTitle',
+    defaultMessage: 'Suggesting a course',
+    description: 'Title while a course is suggested from the transcript.',
+  },
+  buildTitle: {
+    id: 'studio-extension.courseFromRecording.progress.buildTitle',
+    defaultMessage: 'Building your draft course',
+    description: 'Title while the lesson audio is cut and the course is added to Studio.',
+  },
   recordingWithLength: {
     id: 'studio-extension.courseFromRecording.progress.recordingWithLength',
     defaultMessage: '{filename} · {minutes} min',
@@ -85,6 +95,26 @@ const messages = defineMessages({
     id: 'studio-extension.courseFromRecording.progress.stageTranscribe',
     defaultMessage: 'Transcribing the teaching',
     description: 'Part of transcribing.',
+  },
+  stageTopicBreaks: {
+    id: 'studio-extension.courseFromRecording.progress.stageTopicBreaks',
+    defaultMessage: 'Reading the teaching and finding its natural topic breaks',
+    description: 'Part of suggesting a course: where one lesson ends and the next begins.',
+  },
+  stageDraftLessons: {
+    id: 'studio-extension.courseFromRecording.progress.stageDraftLessons',
+    defaultMessage: 'Drafting summaries and questions',
+    description: 'Part of suggesting a course.',
+  },
+  stageCutAudio: {
+    id: 'studio-extension.courseFromRecording.progress.stageCutAudio',
+    defaultMessage: 'Cutting each lesson’s audio',
+    description: 'Part of building the course: the Tibetan and translator tracks of each lesson.',
+  },
+  stageWriteCourse: {
+    id: 'studio-extension.courseFromRecording.progress.stageWriteCourse',
+    defaultMessage: 'Adding it to Studio as a draft',
+    description: 'Part of building the course: writing the sections and lessons into the course.',
   },
   stageSpelling: {
     id: 'studio-extension.courseFromRecording.progress.stageSpelling',

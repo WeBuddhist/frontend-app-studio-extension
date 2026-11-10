@@ -16,12 +16,14 @@ const names = () => screen.getAllByRole('listitem').map((item) => item.querySele
 it('shows every step, marks the current one, and ticks the finished ones', () => {
   renderSteps(true, 'clean');
 
-  expect(names()).toEqual(['Upload', 'Find voices', 'Tag voices', 'Clean', 'Transcribe', 'Transcript']);
+  expect(names()).toEqual([
+    'Upload', 'Find voices', 'Tag voices', 'Clean', 'Transcribe', 'Transcript', 'Shape course', 'Draft course',
+  ]);
   expect(document.querySelector('[aria-current="step"]')?.textContent).toContain(messages.stepClean.defaultMessage);
   expect(screen.getAllByText(messages.stepDone.defaultMessage as string)).toHaveLength(3);
 });
 
 it('leaves out finding and tagging voices for one speaker', () => {
   renderSteps(false, 'upload');
-  expect(names()).toEqual(['Upload', 'Clean', 'Transcribe', 'Transcript']);
+  expect(names()).toEqual(['Upload', 'Clean', 'Transcribe', 'Transcript', 'Shape course', 'Draft course']);
 });

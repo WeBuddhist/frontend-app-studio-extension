@@ -239,7 +239,7 @@ const UploadScreen = ({
           ref={fileInput}
           type="file"
           accept={ACCEPTED_EXTENSIONS.join(',')}
-          className="recording-upload__file-input"
+          className="recording-upload__file-input sr-only"
           data-testid="recording-file-input"
           onChange={(event: ChangeEvent<HTMLInputElement>) => {
             chooseFile(event.target.files?.[0]);

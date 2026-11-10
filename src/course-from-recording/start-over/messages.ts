@@ -36,6 +36,16 @@ const messages = defineMessages({
     defaultMessage: 'The transcript',
     description: 'Deleted when starting over.',
   },
+  courseDraft: {
+    id: 'studio-extension.courseFromRecording.startOver.courseDraft',
+    defaultMessage: 'The suggested course and your changes to it',
+    description: 'Deleted when starting over: the course outline and lessons suggested from the transcript.',
+  },
+  courseStays: {
+    id: 'studio-extension.courseFromRecording.startOver.courseStays',
+    defaultMessage: 'The lessons already added to the course outline stay there, with their audio. Delete them in the course outline if you don’t want them.',
+    description: 'Shown when starting over after the course was written into Studio.',
+  },
   progressSoFar: {
     id: 'studio-extension.courseFromRecording.startOver.progressSoFar',
     defaultMessage: 'The progress so far',

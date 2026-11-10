@@ -13,6 +13,8 @@ interface Phase {
   stages: MessageDescriptor[];
   /** The step a run starts with: its first part is getting the recording ready. */
   prepares?: boolean;
+  /** Where each stage ends, in percent, when the service's progress isn't shared evenly between them. */
+  ends?: number[];
 }
 
 // The service counts downloading and decoding the recording as the first tenth of a run's first step
@@ -45,6 +47,21 @@ const phaseFor = (job: Job): Phase | null => {
           ...(job.details.teacherLanguage === 'bo' ? [messages.stageSpelling] : []),
         ],
       };
+    // The service's outline is the first 30 % (one long request, with no progress of its own), the lessons
+    // the rest.
+    case 'shape':
+      return {
+        title: messages.suggestTitle,
+        stages: [messages.stageTopicBreaks, messages.stageDraftLessons],
+        ends: [30, 100],
+      };
+    // Getting the recordings ready is the first 10 %, cutting up to 95 %, then Studio writes the course.
+    case 'course':
+      return {
+        title: messages.buildTitle,
+        stages: [messages.stagePrepare, messages.stageCutAudio, messages.stageWriteCourse],
+        ends: [10, 95, 100],
+      };
     default:
       return null;
   }
@@ -71,7 +88,7 @@ const ProgressScreen = ({ job }: ProgressScreenProps) => {
 
   // Where each part ends, in percent: getting the recording ready is the first tenth, the rest share
   // what is left evenly.
-  const ends = (phase?.stages ?? []).map((_, index, stages) => {
+  const ends = phase?.ends ?? (phase?.stages ?? []).map((_, index, stages) => {
     if (!phase?.prepares) { return ((index + 1) / stages.length) * 100; }
     if (index === 0) { return PREPARE_SHARE * 100; }
     return (PREPARE_SHARE + ((1 - PREPARE_SHARE) * index) / (stages.length - 1)) * 100;

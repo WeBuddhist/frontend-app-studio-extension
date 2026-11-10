@@ -13,6 +13,8 @@ const STEP_NAMES: Record<StepKey, typeof messages.stepUpload> = {
   clean: messages.stepClean,
   transcribe: messages.stepTranscribe,
   transcript: messages.stepTranscript,
+  shape: messages.stepShape,
+  course: messages.stepCourse,
 };
 
 interface ToolStepsProps {

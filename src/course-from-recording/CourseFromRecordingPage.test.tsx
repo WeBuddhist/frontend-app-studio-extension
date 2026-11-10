@@ -9,6 +9,8 @@ import CourseFromRecordingPage from './CourseFromRecordingPage';
 import failedMessages from './failed/messages';
 import messages from './messages';
 import progressMessages from './progress/messages';
+import readyMessages from './course-ready/messages';
+import shapeMessages from './shape-course/messages';
 import startOverMessages from './start-over/messages';
 import tagMessages from './tag-voices/messages';
 import transcriptMessages from './transcript/messages';
@@ -20,6 +22,7 @@ jest.mock('./data/api', () => ({
   retryJob: jest.fn(),
   startOver: jest.fn(),
   reuseRecording: jest.fn(),
+  saveCourseDraft: jest.fn(),
 }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
@@ -294,5 +297,72 @@ describe('starting over', () => {
     await user.click(screen.getByRole('button', { name: text(startOverMessages.confirm) }));
 
     expect(await screen.findByText('The files could not all be deleted.')).not.toBeNull();
+  });
+});
+
+describe('the course', () => {
+  const courseDraft = {
+    version: 1,
+    courseTitle: 'སྤྱོད་འཇུག',
+    sections: [{
+      id: 's1',
+      title: 'ལེའུ་དང་པོ།',
+      lessons: [{
+        id: 's1-l1',
+        title: 'སྐྱབས་འགྲོ།',
+        include: true,
+        firstLine: 0,
+        lastLine: 3,
+        start: 0,
+        end: 600,
+        minutes: 10,
+        summary: '',
+        keyPoints: [],
+        mcq: [],
+        reflection: [],
+      }],
+    }],
+  };
+
+  it('opens the suggested course for the author to shape', async () => {
+    mockedApi.getLatestJob.mockResolvedValue(latest(runningJob({ status: 'course_draft_ready', courseDraft })));
+    renderAt(`/course-from-recording/${COURSE_ID}`);
+
+    expect(await screen.findByRole('heading', { name: text(shapeMessages.title) })).not.toBeNull();
+    expect(screen.getByDisplayValue('སྐྱབས་འགྲོ།')).not.toBeNull();
+    expect(document.querySelector('[aria-current="step"]')?.textContent).toContain(text(messages.stepShape));
+  });
+
+  it('keeps the author’s changes when they look at Start over and come back', async () => {
+    const user = userEvent.setup();
+    mockedApi.saveCourseDraft.mockImplementation(async (_id, saved) => saved);
+    mockedApi.getLatestJob.mockResolvedValue(latest(runningJob({ status: 'course_draft_ready', courseDraft })));
+    renderAt(`/course-from-recording/${COURSE_ID}`);
+
+    await user.type(await screen.findByDisplayValue('སྐྱབས་འགྲོ།'), 'ཆེན་པོ།');
+    await user.click(screen.getByRole('button', { name: text(startOverMessages.startOver) }));
+    await user.click(screen.getByRole('button', { name: text(startOverMessages.cancel) }));
+
+    expect(screen.getByDisplayValue('སྐྱབས་འགྲོ།ཆེན་པོ།')).not.toBeNull();
+    // The change was sent as the screen closed.
+    expect(mockedApi.saveCourseDraft.mock.calls[0][1].sections[0].lessons[0].title).toBe('སྐྱབས་འགྲོ།ཆེན་པོ།');
+  });
+
+  it('shows the finished draft course, and starting over leaves it in the outline', async () => {
+    const user = userEvent.setup();
+    mockedApi.getLatestJob.mockResolvedValue(latest(runningJob({
+      status: 'course_ready', courseDraft, courseApproved: true, courseSections: ['block-v1:s1'],
+    })));
+    renderAt(`/course-from-recording/${COURSE_ID}`);
+
+    expect(await screen.findByRole('heading', { name: text(readyMessages.title) })).not.toBeNull();
+    await user.click(screen.getByRole('button', { name: text(startOverMessages.startOver) }));
+    expect(screen.getByText(text(startOverMessages.courseStays))).not.toBeNull();
+  });
+
+  it('keeps checking while the course is suggested or built', async () => {
+    mockedApi.getLatestJob.mockResolvedValue(latest(runningJob({ status: 'suggesting', progress: 30 })));
+    renderAt(`/course-from-recording/${COURSE_ID}`);
+    expect(await screen.findByRole('heading', { name: text(progressMessages.suggestTitle) })).not.toBeNull();
   });
 });
